@@ -4,7 +4,17 @@
 x=[2.718281828, -3.141592654, 1.414213562, 0.5772156649, 0.3010299957]
 y= [1486.2497, 878366.9879, -22.37492, 4773714.647, 0.000185049]
 
-function addForward(x,y)
+# wektory w Float32
+x32 = map(x->Float32(x),x)
+y32 = map(x->Float32(x),y)
+
+# wektory w Float64
+x64 = map(x->Float64(x), x)
+y64 = map(x->Float64(x), y)
+
+# sposób a) - sumowanie w przód
+# x,y - wektory
+function addForward(x::Vector,y::Vector)
     sum=0
     for i=1:length(x)
         sum+=x[i]*y[i]
@@ -12,7 +22,9 @@ function addForward(x,y)
     return sum
 end
 
-function addBackward(x,y)
+# sposób b) - sumowanie w tył
+# x,y - wektory
+function addBackward(x::Vector,y::Vector)
     sum=0
     for i=length(x):-1:1
         sum+=x[i]*y[i]
@@ -20,26 +32,35 @@ function addBackward(x,y)
     return sum
 end
 
-function addOrdered(x,y)
-    sum=0
-    posRes=[]
-    negRes=[]
+# sposób c) 
+# x,y - wektory
+function addOrderedC(x::Vector,y::Vector)
+    results=[]
     for i=length(x):-1:1
-        res=x[i]*y[i]
-        res>=0 ? push!(posRes, res) : push!(negRes, res)
+        push!(results, x[i]*y[i])
     end
-    #=
-    reverse!(sort!(posRes))
-    sort!(negRes)
-    posSum=foldl(+, posRes)
-    negSum=foldl(+, negRes)
-    return posSum+negSum
-    =#
-    return posRes, negRes
+    sumPos=foldl(+,sort(filter(x -> x>=0, results), rev=true))
+    sumNeg=foldl(+, sort(filter(x -> x<0, results)))
+    return sumPos+sumNeg
+end
+
+# sposób d) 
+# x,y - wektory
+function addOrderedD(x::Vector,y::Vector)
+    results=[]
+    for i=length(x):-1:1
+        push!(results, x[i]*y[i])
+    end
+    sumPos=foldl(+,sort(filter(x -> x>=0, results)))
+    sumNeg=foldl(+, sort(filter(x -> x<0, results), rev=true))
+    return sumPos+sumNeg
 end
 
 
 
-functions = [addForward, addBackward, addOrdered]#, addReversed]
-foreach(type -> println(type, ": ",type(x,y)), functions)
+functions = [addForward, addBackward, addOrderedC, addOrderedD]
+println("Float32:")
+foreach(type -> println(type, ": ",type(x32,y32)), functions)
+println("Float64:")
+foreach(type -> println(type, ": ",type(x64,y64)), functions)
 

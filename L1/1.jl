@@ -1,27 +1,38 @@
 #Piotr Kołodziejczyk
 #L1Z1
 
+
+#tablica typów liczb zmiennopozycyjnych
 types=[Float16, Float32, Float64]
 
-function macheps(type)
+#funkcja wyliczająca wartość epsilonu maszynowego
+#type - typ, dla którego ma być wyliczona 
+function macheps(type::Type)
     x=one(type)
     while one(type)+x/2>one(type)
         x/=2
         if typeof(x)!=type
-            println("LOL")
+            println("Nastąpiła niejawna konwersja typu (?)")
         end
     end
     return x
 end
 
-function eta(type)
+#funkcja wyliczająca wartość eta
+#type - typ, dla którego ma być wyliczona
+function eta(type::Type)
     x=one(type)
     while x/2>zero(type)
         x/=2
+        if typeof(x)!=type
+            println("Nastąpiła niejawna konwersja typu (?)")
+        end
     end
     return x
 end
 
+#funkcja wyliczająca wartość maksymalna
+#type - typ, dla którego ma być wyliczona
 function maxInType(type)
     x=one(type)
     while !isinf(x*2)

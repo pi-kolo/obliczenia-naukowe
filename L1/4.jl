@@ -1,16 +1,22 @@
-function notEqual(start)
+#Piotr Kołodziejczyk
+#L1Z4
+
+#funkcja szukająca iteracyjnie po kolei takiej liczby, która spełnia warunek zadania
+#start - początek przedziału poszukiwań
+function notEqual(start) :: Float64
     x=nextfloat(Float64(start))
     while Float64(x*Float64(1/x))==one(Float64)
         x=nextfloat(x)
     end
-    return Float64(x)
+    return x
 end
 
 println("x: 1<x<2 and x*(1/x) in Float64 = ", notEqual(1))
 
-function minNotEq()
+#funkcja znajdująca najmniejszą taką liczbę >0
+function minNotEq() :: Float64
     x=nextfloat(Float64(0.0))
-    while isinf(Float64(x*Float64(1/x))) #for small numbers result is infinity
+    while isinf(Float64(x*Float64(1/x))) #dla małych liczb wynik to nieskończoność
         x*=2
     end
     while Float64(x*Float64(1/x))==one(Float64)
