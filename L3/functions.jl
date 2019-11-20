@@ -23,23 +23,23 @@ Zwracana czwórka (r,v,it,err) taka że:
 
 #while nie chce współpracować jeszcze xD
 function mbisekcji(f, a::Float64, b::Float64, delta::Float64, epsilon::Float64)
+
     u=f(a)
-    v=f(b)
-    e=b-a
-    # c, w = 0, 0 
+    v=f(b) 
+    e=b-a 
+    c,w = 0,0
     it=0
 
     if sign(u)==sign(v)
         return (0,0,0,1)
     end
 
-    # while abs(e) > delta  
-    for k in 1:200
-        it++
-        e=e/2
+    while abs(e) > delta
+        it+=1
+        e/=2
         c=a+e
         w=f(c)
-        if abs(w) < epsilon || abs(e) < delta
+        if abs(w) < epsilon
             return (c, w, it, 0)
         end
         if sign(w) != sign(u)
@@ -48,7 +48,7 @@ function mbisekcji(f, a::Float64, b::Float64, delta::Float64, epsilon::Float64)
             a, u=c, w
         end
     end
-    return "xd"
+    return (c,w,it,0)
 end
 
 """
