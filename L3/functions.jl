@@ -21,7 +21,6 @@ Zwracana czwórka (r,v,it,err) taka że:
         1 - funkcja nie zmienia znaku na przedziale [a,b]
 """
 
-#while nie chce współpracować jeszcze xD
 function mbisekcji(f, a::Float64, b::Float64, delta::Float64, epsilon::Float64)
 
     u=f(a)
@@ -33,20 +32,19 @@ function mbisekcji(f, a::Float64, b::Float64, delta::Float64, epsilon::Float64)
     if sign(u)==sign(v)
         return (0,0,0,1)
     end
-
     while abs(e) > delta
-        it+=1
         e/=2
         c=a+e
         w=f(c)
         if abs(w) < epsilon
-            return (c, w, it, 0)
+            return (c, w, it,0)
         end
         if sign(w) != sign(u)
             b,v = c, w
         else
             a, u=c, w
         end
+        it+=1
     end
     return (c,w,it,0)
 end
@@ -75,6 +73,9 @@ function mstycznych(f, pf, x0::Float64, delta::Float64, epsilon::Float64, maxit:
         return (x0, v, 0, 0)
     end
     for it in 1:maxit
+        if abs(pf(x0)) < epsilon
+            return (x0, v, it, 2)
+        end
         x1 = x0-v/pf(x0)
         v = f(x1)
         if abs(x1-x0) < delta || abs(v) < epsilon

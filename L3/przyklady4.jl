@@ -1,7 +1,19 @@
+#Piotr Kołodziejczyk
+#L3Z4
 include("functions.jl")
+"""
+Testy zaimplementowanych metod dla zadanej funkcji f(x)=sin(x)-(x/2)^2
 
-print(AproxFunctions.mbisekcji(x->(sin(x)-0.25x^2), 1.5, 2.0, 0.5*10^-5, 0.5*10^-5))
+"""
 
-print(AproxFunctions.mstycznych(x->(sin(x)-0.25x^2), x->(cos(x)-0.5x), 1.5, 0.5*10^-5, 0.5^10^-5, 100))
+#Wymagane dane: funkcja f, pochodna pf, oraz dokładności delta i epsilon
+f(x)=sin(x)-(x/2)^2
+pf(x) = cos(x) - x/2
+delta = 10^-5 /2
+epsilon = 10^-5 /2
 
-print(AproxFunctions.msiecznych(x->(sin(x)-0.25x^2), 1.0, 2.0, 0.5*10^-5, 0.5^10^-5, 100))
+println(AproxFunctions.mbisekcji(f, 1.0, 2.0, delta, epsilon))
+
+println(AproxFunctions.mstycznych(f, pf, 1.5, delta, epsilon, 100))
+
+println(AproxFunctions.msiecznych(f, 1.0, 2.0, delta, epsilon, 100))
