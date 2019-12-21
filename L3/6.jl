@@ -21,5 +21,5 @@ println(AproxFunctions.msiecznych(f1, -1.0, 2.0, delta, epsilon, 100 ))
 
 #dla f2 [-1.5, 2]
 println(AproxFunctions.mbisekcji(f2, -1.5, 2.0, delta, epsilon))
-println(AproxFunctions.mstycznych(f2, f2p, 0.5, delta, epsilon, 100))
+println(AproxFunctions.mstycznych(f2, f2p, 40.0, delta, epsilon, 100))
 println(AproxFunctions.msiecznych(f2, -1.0, 1.0, delta, epsilon, 100))

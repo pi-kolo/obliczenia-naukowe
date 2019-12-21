@@ -11,7 +11,7 @@ function notEqual(start) :: Float64
     return x
 end
 
-println("x: 1<x<2 and x*(1/x) in Float64 = ", notEqual(1))
+println("x: 1<x<2 and x*(1/x) in Float64 = ", notEqual(0))
 
 #funkcja znajdująca najmniejszą taką liczbę >0
 function minNotEq() :: Float64
