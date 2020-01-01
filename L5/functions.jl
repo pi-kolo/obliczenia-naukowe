@@ -1,11 +1,6 @@
 #Piotr Kołodziejczyk
 
-#solveWithGauss działa, w miare
-#solveWithChoiceGauss działa, nawet w miarę, dla 50k nie tak długo, macierz kilka sekund ino
-#solveWithLU działa, bez optymalizacji dla 50k kilkanaście sekund
-#solveWithLUChoice działa (?, jakoś nagle zaczęło xD)
-
-#so, oczyścić, uczytelnić i zakresy zrobić dokładniejsze :))
+#funkcje działają, nad zakresami jeszcze pomyślę
 
 include("IOfunctions.jl")
 include("matrixgen.jl")
@@ -35,30 +30,49 @@ end
 
 """
 Function computing Gauss matrix (upper triangular) from matrix A
+    Parameters:
+        A - matrix (as SparseArray)
+        n - size of matrix
+        l - size of one block
+        b - right side Vector
+    Result:
+        B - modified (Gauss) matrix
+        b - modified right side vector
 """
-function changedGauss(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64, b::Vector{Float64})
+function modifiedGauss(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64, b::Vector{Float64})
     B = copy(A)
-    # v=Int64(n/l)
     count = 0
     #loop over columns
     for k in 1:n-1
         #loop over rows
-        for i in k+1 : min(n,k+2*l)#min(k+l+3, n)
-            z = B[i,k]/B[k,k]
-            B[i,k] = 0.0
-            #for each cell change others in row
-            for j in k+1 : min(n,k+2*l)
-                B[i,j] -=  z*B[k,j]
+        for i in k+1 : min(n, k+2*l-k%l)
+            multiplier = B[i,k] / B[k,k]
+            B[i,k] = Float64(0.0)
+            #for each cell change others in the row
+            for j in k+1 : min(n,k+l+k%l+2)
+                B[i,j] -=  multiplier * B[k,j]
             end
-            b[i] -= z * b[k]
+            #when modifing matrix, right side vector must be modified too
+            b[i] -= multiplier * b[k]
         end
     end
     return B, b
 end
 
-function changedGaussWithChoice(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64, b)
+"""
+Function computing Gauss matrix (upper triangular) from matrix A with choice of main element
+    Parameters:
+        A - matrix (as SparseArray)
+        n - size of matrix
+        l - size of one block
+        b - right side Vector
+    Result:
+        B - modified (Gauss) matrix
+        b - modified right side vector
+"""
+function modifiedGaussWithChoice(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64, b)
     B = copy(A)
-    count = 0
+
     #permutations array
     p = [1:n;]
    
@@ -77,84 +91,112 @@ function changedGaussWithChoice(A::SparseArrays.SparseMatrixCSC{Float64, Int64},
             end
         end
 
+        #swap elements in permutation vector
         p[indexMax], p[k] = p[k], p[indexMax]
 
         #downto in k-column
         for i in k+1 : min(n, k+ 2*l)
-            z = B[p[i],k] / B[p[k],k]
+
+            multiplier = B[p[i],k] / B[p[k],k]
             B[p[i],k] = Float64(0.0)
+            #modify values over the row
             for j in k+1 : min(n,k+2*l)
-                B[p[i],j] -= z*B[p[k],j]
+                B[p[i],j] -= multiplier * B[p[k],j]
             end
-            b[p[i]] -= z * b[p[k]]
+            #modify values in right side vector
+            b[p[i]] -= multiplier * b[p[k]]
         end
     end
-    println("Gauss matrix made")
+    println("Gauss matrix computed")
     return B, p, b
 end
 
 """
-Function solving A x = b
+Function resolving Ax=b with Gauss elimination
+    Parameters:
+        A - matrix (as SparseArray)
+        n - size of matrix
+        l - size of one block
+        b - right side Vector
+    Result:
+        x - result vector
 """
 function solveWithGauss(n::Int64,A::SparseArrays.SparseMatrixCSC{Float64, Int64}, b::Vector{Float64}, l::Int64) :: Vector{Float64}
-    B = changedGauss(A, n, l, b)
-    matrix = B[1]
-    b2 = B[2]
-    print("macierz wygenerowana")
+    gauss = modifiedGauss(A, n, l, b)
+    # gauss matrix
+    B = gauss[1]
+    #modified b vector
+    b = gauss[2]
     x = zeros(Float64, n)
+    #iterate over matrix to compute x-vector
     for i in n:-1:1
         sum = 0
         for j in i+1 : n
-            sum += matrix[i,j]*x[j]
+            sum += B[i,j] * x[j]
         end
-        x[i] = (b2[i] - sum)/matrix[i,i]
+        x[i] = (b[i] - sum) / B[i,i]
     end
     return x
 end
 
 
 """
-Function solving A x = b with choice of main element 
+Function resolving Ax=b with Gauss elimination with choice of main element, using implicitly PA=LU
+    Parameters:
+        A - matrix (as SparseArray)
+        n - size of matrix
+        l - size of one block
+        b - right side Vector
+    Result:
+        x - result vector
 """
 function solveWithChoiceGauss(n::Int64, A::SparseArrays.SparseMatrixCSC{Float64, Int64}, b::Vector{Float64}, l::Int64)
-    B = changedGaussWithChoice(A, n, l, b)
-    matrix = B[1]
-    p = B[2]
-    b2 = B[3]
+    gauss = modifiedGaussWithChoice(A, n, l, b)
+    B = gauss[1]
+    p = gauss[2]
+    b = gauss[3]
     x=zeros(Float64,n)
+
+    # resolves Lz=Pb
     for k in 1: n-1
         for i in k+1 : n
-            b2[p[i]] -= matrix[p[i],k]*b2[p[k]]
+            b[p[i]] -= B[p[i],k] * b[p[k]]
         end
     end
+    #resolves Ux=z
     for i in n:-1:1
         sum = 0
         for j in i+1 : n
-            sum+=matrix[p[i],j]*x[j]
+            sum+=B[p[i],j] * x[j]
         end
-        x[i]=(b2[p[i]]-sum)/matrix[p[i],i]
+        x[i] = (b[p[i]]-sum)/B[p[i],i]
     end
     return x
 end
 """
 Function generating matrices L and U after Gauss elimination
+    Parameters:
+        A - matrix as SparseArray
+        n - size od matrix
+        l - size of block ( l|n )
+    Result:
+        L (lower triangular) and U (upper triangular) matrices
 """
-function changedGaussLU(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64)
+function modifiedGaussLU(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64)
     U = copy(A)
-    # v=Int64(n/l)
     L = SparseArrays.spzeros(n,n)
-    count = 0
+    
     #loop over columns
     for k in 1:n-1
         L[k,k]=1.0
         #loop over rows
-        for i in k+1 : min(n,k+2*l)#min(k+l+3, n)
-            z = U[i,k]/U[k,k]
-            L[i,k] = z
+        for i in k+1 : min(n,k+2*l)
+            multiplier = U[i,k] / U[k,k]
+            L[i,k] = multiplier 
             U[i,k] = 0.0
             #for each cell change others in row
             for j in k+1 : min(n, k+2*l)
-                U[i,j] -=  z*U[k,j]
+                U[i,j] -=  multiplier*U[k,j]
             end
         end
     end
@@ -162,76 +204,109 @@ function changedGaussLU(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int6
     return L, U
 end
 
-function changedGaussWithChoiceLU(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64)
+"""
+Function generating matrices L and U after Gauss elimination with choice of main element
+    Parameters:
+        A - matrix as SparseArray
+        n - size od matrix
+        l - size of block ( l|n )
+    Result:
+        L (lower triangular) and U (upper triangular) matrices
+"""
+function modifiedGaussWithChoiceLU(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64)
     U = copy(A)
-    count = 0
     L = SparseArrays.spzeros(n,n)
     #permutations array
     p = [1:n;]
    
     #itereate over columns
     for k in 1:n-1
-        # L[k,k]=1.0
         #get max value in each column (from rows k to n)
         maxInCol=0
         indexMax = 0
         
-        #over rows
+        #find max element in column 
         for i in k: min(n, k+ 2*l - k%l)
             if abs(U[p[i], k]) > maxInCol
                 maxInCol = abs(U[p[i], k])
                 indexMax = i
             end
         end
-
+        #swap elements in permutation vector
         p[indexMax], p[k] = p[k], p[indexMax]
-        # L[p[k],p[k]] = 1
+        
         #downto in k-column
-        for i in k+1 : min(n, k+ 2*l )
-            z = U[p[i],k] / U[p[k],k]
-            L[p[i],k] = z
+        for i in k+1 : min(n, k + 2*l)
+            multiplier = U[p[i],k] / U[p[k],k]
+
+            L[p[i],k] = multiplier
             U[p[i],k] = Float64(0.0)
-            for j in k+1 : min(n,k+2*l)
-                U[p[i],j] -= z*U[p[k],j]
+
+            for j in k+1 : min(n, k + 2*l)
+                U[p[i],j] -= multiplier * U[p[k],j]
             end
         end
     end
-    # L[p[1],p[1]] = 1.0
-    # L[p[n],p[n]] = 1.0
     return  L, U, p
 end
 
-
+"""
+Function resolving Ax=b, using using L and U matrices
+    Parameters:
+        L - lower triangular matrix
+        U - upper triangular matrix
+        n - size of matrix
+        l - size of one block
+        b - right side Vector
+    Result:
+        x - result vector
+"""
 function solveWithLU(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64, b)
     x=zeros(Float64,n)
+    #resolves Lz = b
     for k in 1: n-1
         for i in k+1 : n
-            b[i] -= L[i,k]*b[k]
+            b[i] -= L[i,k] * b[k]
         end
     end
+    #resolves Ux = z
     for i in n:-1:1
         sum = 0
         for j in i+1 : n
-            sum+=U[i,j]*x[j]
+            sum +=U[i,j] * x[j]
         end
-        x[i]=(b[i]-sum)/U[i,i]
+        x[i] = (b[i]-sum) / U[i,i]
     end
     return x
 end
 
+"""
+Function resolving Ax=b, using using L and U matrices and p permutation vector
+    Parameters:
+        L - lower triangular matrix
+        U - upper triangular matrix
+        p - permutation vector
+        n - size of matrix
+        l - size of one block
+        b - right side Vector
+    Result:
+        x - result vector
+"""
 function solveWithLUChoice(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::SparseArrays.SparseMatrixCSC{Float64, Int64},p, n::Int64, l::Int64, b)
     x=zeros(Float64,n)
+    # Lz = Pb
     for k in 1: n-1
         for i in k+1 : n
-            b[p[i]] -= L[p[i],k]*b[p[k]]
+            b[p[i]] -= L[p[i],k] * b[p[k]]
         end
     end
+    # Ux = z
     for i in n:-1:1
         sum = 0
         for j in i+1 : n
-            sum+=U[p[i],j]*x[j]
+            sum += U[p[i],j] * x[j]
         end
-        x[i]=(b[p[i]]-sum)/U[p[i],i]
+        x[i] = (b[p[i]]-sum) / U[p[i],i]
     end
     return x
 end
@@ -241,10 +316,13 @@ end
 E = IOfunctions.readMatrix("16/A.txt")
 f = IOfunctions.readRightSideVector("16/b.txt")
 
-# A = changedGauss(E, 16, 4, f)
-X = solveWithGauss(16, E, f, 4)
-println(Array(X))
-# y = changedGaussWithChoiceLU(E, 50000, 4)
+LU = modifiedGaussWithChoiceLU(E, 16, 4)
+k = solveWithLUChoice(LU[1], LU[2], LU[3], 16, 4, f)
+println(k)
+# A = modifiedGauss(E, 16, 4, f)
+# X = solveWithGauss(16, E, f, 4)
+# println(Array(A[1]))
+# y = modifiedGaussWithChoiceLU(E, 50000, 4)
 # x = solveWithLUChoice(y[1], y[2],y[3], 50000, 4, f)
 # println(x)
 
