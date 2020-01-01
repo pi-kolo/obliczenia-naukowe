@@ -45,7 +45,7 @@ function changedGauss(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64,
         #loop over rows
         for i in k+1 : min(n,k+2*l)#min(k+l+3, n)
             z = B[i,k]/B[k,k]
-            B[i,k] = z#0.0
+            B[i,k] = 0.0
             #for each cell change others in row
             for j in k+1 : min(n,k+2*l)
                 B[i,j] -=  z*B[k,j]
@@ -53,7 +53,7 @@ function changedGauss(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64,
             b[i] -= z * b[k]
         end
     end
-    return B
+    return B, b
 end
 
 function changedGaussWithChoice(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64, b)
@@ -98,14 +98,16 @@ Function solving A x = b
 """
 function solveWithGauss(n::Int64,A::SparseArrays.SparseMatrixCSC{Float64, Int64}, b::Vector{Float64}, l::Int64) :: Vector{Float64}
     B = changedGauss(A, n, l, b)
+    matrix = B[1]
+    b2 = B[2]
     print("macierz wygenerowana")
     x = zeros(Float64, n)
     for i in n:-1:1
         sum = 0
         for j in i+1 : n
-            sum += B[i,j]*x[j]
+            sum += matrix[i,j]*x[j]
         end
-        x[i] = (b[i] - sum)/B[i,i]
+        x[i] = (b2[i] - sum)/matrix[i,i]
     end
     return x
 end
@@ -236,10 +238,13 @@ end
         
 
 
-E = IOfunctions.readMatrix("50000/A.txt")
-f = IOfunctions.readRightSideVector("50000/b.txt")
+E = IOfunctions.readMatrix("16/A.txt")
+f = IOfunctions.readRightSideVector("16/b.txt")
 
-y = changedGaussWithChoiceLU(E, 50000, 4)
-x = solveWithLUChoice(y[1], y[2],y[3], 50000, 4, f)
-println(x)
+# A = changedGauss(E, 16, 4, f)
+X = solveWithGauss(16, E, f, 4)
+println(Array(X))
+# y = changedGaussWithChoiceLU(E, 50000, 4)
+# x = solveWithLUChoice(y[1], y[2],y[3], 50000, 4, f)
+# println(x)
 
