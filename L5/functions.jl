@@ -1,5 +1,12 @@
 #Piotr Kołodziejczyk
 
+#solveWithGauss działa, w miare
+#solveWithChoiceGauss działa, nawet w miarę, dla 50k nie tak długo, macierz kilka sekund ino
+#solveWithLU działa, bez optymalizacji dla 50k kilkanaście sekund
+#solveWithLUChoice działa (?, jakoś nagle zaczęło xD)
+
+#so, oczyścić, uczytelnić i zakresy zrobić dokładniejsze :))
+
 include("IOfunctions.jl")
 include("matrixgen.jl")
 import SparseArrays
@@ -153,7 +160,7 @@ function changedGaussLU(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int6
     return L, U
 end
 
-function changedGaussWithChooseLU(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64)
+function changedGaussWithChoiceLU(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64)
     U = copy(A)
     count = 0
     L = SparseArrays.spzeros(n,n)
@@ -176,11 +183,11 @@ function changedGaussWithChooseLU(A::SparseArrays.SparseMatrixCSC{Float64, Int64
         end
 
         p[indexMax], p[k] = p[k], p[indexMax]
-        L[p[k],p[k]] = 1
+        # L[p[k],p[k]] = 1
         #downto in k-column
-        for i in k+1 : min(n, k+ 2*l - k%l)
+        for i in k+1 : min(n, k+ 2*l )
             z = U[p[i],k] / U[p[k],k]
-            L[i,k] = z
+            L[p[i],k] = z
             U[p[i],k] = Float64(0.0)
             for j in k+1 : min(n,k+2*l)
                 U[p[i],j] -= z*U[p[k],j]
@@ -193,40 +200,46 @@ function changedGaussWithChooseLU(A::SparseArrays.SparseMatrixCSC{Float64, Int64
 end
 
 
-#solveWithGauss działa, w miare
-#solveWithChoiceGauss działa, nawet w miarę, dla 50k nie tak długo, macierz kilka sekund ino
+function solveWithLU(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64, b)
+    x=zeros(Float64,n)
+    for k in 1: n-1
+        for i in k+1 : n
+            b[i] -= L[i,k]*b[k]
+        end
+    end
+    for i in n:-1:1
+        sum = 0
+        for j in i+1 : n
+            sum+=U[i,j]*x[j]
+        end
+        x[i]=(b[i]-sum)/U[i,i]
+    end
+    return x
+end
 
+function solveWithLUChoice(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::SparseArrays.SparseMatrixCSC{Float64, Int64},p, n::Int64, l::Int64, b)
+    x=zeros(Float64,n)
+    for k in 1: n-1
+        for i in k+1 : n
+            b[p[i]] -= L[p[i],k]*b[p[k]]
+        end
+    end
+    for i in n:-1:1
+        sum = 0
+        for j in i+1 : n
+            sum+=U[p[i],j]*x[j]
+        end
+        x[i]=(b[p[i]]-sum)/U[p[i],i]
+    end
+    return x
+end
+        
 
-# x = [6,-2,2,4, 12,-8,6,10, 3,-13,9,3,-6,4,1,-18]
-# y = SparseArrays.sparse( [1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4],[1:4;1:4;1:4;1:4], x)
-# A = IOfunctions.readMatrix("50000/A.txt")
-# # println(A)
-# B=copy(A)
-# matrixgen.blockmat(10, 2, 15.0, "10.txt")
-# A = IOfunctions.readMatrix("16/A.txt")
-# b = IOfunctions.readRightSideVector("16/b.txt")
-
-# matrixgen.blockmat(100, 4, 5.0, "100.txt")
-
-# C = IOfunctions.readMatrix("100.txt")
-# d = Array(C)*ones(Float64, 100)
-
-# C2 = changedGaussWithChoose(C, 100, 4)
-# println(solveWithChoiceGauss(100, C2[1], C2[2], d))
 
 E = IOfunctions.readMatrix("50000/A.txt")
 f = IOfunctions.readRightSideVector("50000/b.txt")
 
-x =solveWithGauss(50000, E, f, 4)
-# println(E)
-# E2 = changedGauss(E, 10000, 4)
-# println(Array(x[2]))
-# y=changedGaussLU(E,16,4)
-println(Array(x))
-# println(x[3]*Array(E))
-# println(Array(E))
-# println(Array(E)\f)
-# A2 = changedGaussWithChoose(A, 16, 4)
-# println(solveWithChoiceGauss(16, A2[1], A2[2], b))
-# println(solveWithChoiceGauss)
+y = changedGaussWithChoiceLU(E, 50000, 4)
+x = solveWithLUChoice(y[1], y[2],y[3], 50000, 4, f)
+println(x)
 
