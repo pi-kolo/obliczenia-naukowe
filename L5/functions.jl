@@ -113,7 +113,7 @@ function modifiedGaussWithChoice(A::SparseArrays.SparseMatrixCSC{Float64, Int64}
 end
 
 """
-Function resolving Ax=b with Gauss elimination
+Function solving Ax=b with Gauss elimination
     Parameters:
         A - matrix (as SparseArray)
         n - size of matrix
@@ -142,7 +142,7 @@ end
 
 
 """
-Function resolving Ax=b with Gauss elimination with choice of main element, using implicitly PA=LU
+Function solving Ax=b with Gauss elimination with choice of main element, using implicitly PA=LU
     Parameters:
         A - matrix (as SparseArray)
         n - size of matrix
@@ -317,14 +317,17 @@ end
 E = IOfunctions.readMatrix("16/A.txt")
 f = IOfunctions.readRightSideVector("16/b.txt")
 
+f2 = IOfunctions.rightSideFromMatrix(E, 16, 4)
+
 # LU = modifiedGaussWithChoiceLU(E, 16, 4)
 # k = solveWithLUChoice(LU[1], LU[2], LU[3], 16, 4, f)
 # println(k)
 # A = modifiedGauss(E, 16, 4, f)
 X = modifiedGaussLU(E,16, 4)
 Y = solveWithLU(X[1], X[2], 16, 4, f)
+IOfunctions.saveVectorToFileDelta(Y, "wektor.txt")
 # println(Array(X[1])*Array(X[2]))
-println(Array(Y))
+# println(Array(Y))
 # println(f)
 # y = modifiedGaussWithChoiceLU(E, 50000, 4)
 # x = solveWithLUChoice(y[1], y[2],y[3], 50000, 4, f)

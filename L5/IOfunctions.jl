@@ -1,7 +1,9 @@
 
 module IOfunctions
 import SparseArrays
-export readRightSideVector, readMatrix
+using LinearAlgebra
+
+export readRightSideVector, readMatrix, rightSideFromMatrix, saveVectorToFile, saveVectorToFileDelta
 
 function readMatrix(file) :: SparseArrays.SparseMatrixCSC{Float64, Int64}
     open(file) do f
@@ -30,6 +32,37 @@ function readRightSideVector(file) :: Vector{Float64}
             push!(values, parse(Float64, ln))
         end
         return values
+    end
+end
+
+function rightSideFromMatrix(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64) :: Vector{Float64}
+    x = ones(Float64, n)
+    b = zeros(Float64, n)
+
+    #iterate over rows
+    for i in 1 : n
+        for j in max(1, i-(2+l-i%l)): min(n, i+l)
+            b[i] += A[i,j]
+        end
+    end
+    return b
+end
+
+function saveVectorToFile(x::Vector{Float64}, filename)
+    open(filename, "w") do file
+        for i in 1 : length(x)
+            write(file, "$(x[i])\n")
+        end
+    end
+end
+
+function saveVectorToFileDelta(x::Vector{Float64}, filename)
+    open(filename, "w") do file
+        delta = norm(ones(length(x))-x)
+        write(file, "$delta\n")
+        for i in 1 : length(x)
+            write(file, "$(x[i])\n")
+        end
     end
 end
 
