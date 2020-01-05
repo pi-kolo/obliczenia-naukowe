@@ -9,7 +9,7 @@ include("matrixgen.jl")
 import SparseArrays
 import LinearAlgebra
 
-export classicGauss, modifiedGauss, modifiedGaussLU, modifiedGaussWithChoice, modifiedGaussWithChoiceLU, solveWithGauss, solveWithLU, solveWithChoiceGauss, solveWithLUChoice
+export classicGauss, modifiedGauss, modifiedGaussLU, modifiedGaussWithChoice, modifiedGaussWithChoiceLU, solveWithGauss, solveWithLU, solveWithChoiceGauss, solveWithLUChoice, LU, LUChoice
 
 function classicGauss(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64) :: SparseArrays.SparseMatrixCSC{Float64, Int64}
     B = copy(A)
@@ -265,8 +265,9 @@ Function resolving Ax=b, using using L and U matrices
     Result:
         x - result vector
 """
-function solveWithLU(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64, b::Vector{Float64})
-    x=zeros(Float64,n)
+function solveWithLU(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64, bv::Vector{Float64})
+    x = zeros(Float64,n)
+    b = copy(bv)
     #solves Lz = b
     for k in 1: n-1
         for i in k+1 : min(n, k+l+1)
@@ -296,8 +297,9 @@ Function resolving Ax=b, using using L and U matrices and p permutation vector
     Result:
         x - result vector
 """
-function solveWithLUChoice(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::SparseArrays.SparseMatrixCSC{Float64, Int64},p, n::Int64, l::Int64, b::Vector{Float64})
-    x=zeros(Float64,n)
+function solveWithLUChoice(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::SparseArrays.SparseMatrixCSC{Float64, Int64}, p::Vector{Int64}, n::Int64, l::Int64, bv::Vector{Float64})
+    b = copy(bv)
+    x = zeros(Float64,n)
     # Lz = Pb
     for k in 1: n-1
         for i in k+1 : min(n, k+2*l+5)
@@ -314,7 +316,19 @@ function solveWithLUChoice(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::S
     end
     return x
 end
-        
+
+function LU(n::Int64, A::SparseArrays.SparseMatrixCSC{Float64, Int64}, bv::Vector{Float64}, l::Int64)
+    LU = modifiedGaussLU(A, n, l)
+    x = solveWithLU(LU[1], LU[2], n, l, bv)
+    return x
+end
+
+function LUChoice(n::Int64, A::SparseArrays.SparseMatrixCSC{Float64, Int64}, bv::Vector{Float64}, l::Int64)
+    LU = modifiedGaussWithChoiceLU(A, n, l)
+    x = solveWithLUChoice(LU[1], LU[2], LU[3], n, l, bv)
+    return x
+end
+
 end
 
 # E = IOfunctions.readMatrix("16/A.txt")

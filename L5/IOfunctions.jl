@@ -1,6 +1,8 @@
-
+#Piotr Kołodziejczyk
 module IOfunctions
+
 import SparseArrays
+
 using LinearAlgebra
 
 export readRightSideVector, readMatrix, rightSideFromMatrix, saveVectorToFile, saveVectorToFileDelta
