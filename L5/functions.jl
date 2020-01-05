@@ -2,10 +2,14 @@
 
 #funkcje działają, nad zakresami jeszcze pomyślę
 
+module blocksys
+
 include("IOfunctions.jl")
 include("matrixgen.jl")
 import SparseArrays
 import LinearAlgebra
+
+export classicGauss, modifiedGauss, modifiedGaussLU, modifiedGaussWithChoice, modifiedGaussWithChoiceLU, solveWithGauss, solveWithLU, solveWithChoiceGauss, solveWithLUChoice
 
 function classicGauss(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64) :: SparseArrays.SparseMatrixCSC{Float64, Int64}
     B = copy(A)
@@ -50,7 +54,7 @@ function modifiedGauss(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64
             multiplier = B[i,k] / B[k,k]
             B[i,k] = Float64(0.0)
             #for each cell change others in the row
-            for j in k+1 : min(n, k+l+k%l+2)
+            for j in k+1 : min(n, k+l+1)
                 B[i,j] -=  multiplier * B[k,j]
             end
             #when modifing matrix, right side vector must be modified too
@@ -101,14 +105,13 @@ function modifiedGaussWithChoice(A::SparseArrays.SparseMatrixCSC{Float64, Int64}
             multiplier = B[p[i],k] / B[p[k],k]
             B[p[i],k] = Float64(0.0)
             #modify values over the row
-            for j in k+1 : min(n, k+l+k%l+2)
+            for j in k+1 : min(n, k+2*l)
                 B[p[i],j] -= multiplier * B[p[k],j]
             end
             #modify values in right side vector
             b[p[i]] -= multiplier * b[p[k]]
         end
     end
-    println("Gauss matrix computed")
     return B, p, b
 end
 
@@ -132,7 +135,7 @@ function solveWithGauss(n::Int64,A::SparseArrays.SparseMatrixCSC{Float64, Int64}
     #iterate over matrix to compute x-vector
     for i in n:-1:1
         sum = 0
-        for j in i+1 : min(n, i+l)
+        for j in i+1 : min(n, i+l+2)
             sum += B[i,j] * x[j]
         end
         x[i] = (b[i] - sum) / B[i,i]
@@ -196,7 +199,7 @@ function modifiedGaussLU(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int
             L[i,k] = multiplier 
             U[i,k] = 0.0
             #for each cell change others in row
-            for j in k+1 : min(n, k+l+l%l+2)
+            for j in k+1 : min(n, k+2*l)
                 U[i,j] -=  multiplier*U[k,j]
             end
         end
@@ -243,7 +246,7 @@ function modifiedGaussWithChoiceLU(A::SparseArrays.SparseMatrixCSC{Float64, Int6
             L[p[i],k] = multiplier
             U[p[i],k] = Float64(0.0)
 
-            for j in k+1 : min(n, k + k+l+k%l+2)
+            for j in k+1 : min(n, k + 2*l)
                 U[p[i],j] -= multiplier * U[p[k],j]
             end
         end
@@ -262,18 +265,18 @@ Function resolving Ax=b, using using L and U matrices
     Result:
         x - result vector
 """
-function solveWithLU(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64, b)
+function solveWithLU(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64, b::Vector{Float64})
     x=zeros(Float64,n)
     #solves Lz = b
     for k in 1: n-1
-        for i in k+1 : min(n, k+2*l)
+        for i in k+1 : min(n, k+l+1)
             b[i] -= L[i,k] * b[k]
         end
     end
     #solves Ux = z
     for i in n:-1:1
         sum = 0
-        for j in i+1 : min(n, i+2*l)
+        for j in i+1 : min(n, i+l)
             sum +=U[i,j] * x[j]
         end
         x[i] = (b[i]-sum) / U[i,i]
@@ -293,11 +296,11 @@ Function resolving Ax=b, using using L and U matrices and p permutation vector
     Result:
         x - result vector
 """
-function solveWithLUChoice(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::SparseArrays.SparseMatrixCSC{Float64, Int64},p, n::Int64, l::Int64, b)
+function solveWithLUChoice(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::SparseArrays.SparseMatrixCSC{Float64, Int64},p, n::Int64, l::Int64, b::Vector{Float64})
     x=zeros(Float64,n)
     # Lz = Pb
     for k in 1: n-1
-        for i in k+1 : min(n, k+2*l)
+        for i in k+1 : min(n, k+2*l+5)
             b[p[i]] -= L[p[i],k] * b[p[k]]
         end
     end
@@ -312,24 +315,27 @@ function solveWithLUChoice(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::S
     return x
 end
         
+end
 
+# E = IOfunctions.readMatrix("16/A.txt")
+# f = IOfunctions.readRightSideVector("16/b.txt")
 
-E = IOfunctions.readMatrix("16/A.txt")
-f = IOfunctions.readRightSideVector("16/b.txt")
+# f2 = IOfunctions.rightSideFromMatrix(E, 16, 4)
 
-f2 = IOfunctions.rightSideFromMatrix(E, 16, 4)
-
-# LU = modifiedGaussWithChoiceLU(E, 16, 4)
-# k = solveWithLUChoice(LU[1], LU[2], LU[3], 16, 4, f)
-# println(k)
-# A = modifiedGauss(E, 16, 4, f)
-X = modifiedGaussLU(E,16, 4)
-Y = solveWithLU(X[1], X[2], 16, 4, f)
-IOfunctions.saveVectorToFileDelta(Y, "wektor.txt")
-# println(Array(X[1])*Array(X[2]))
-# println(Array(Y))
-# println(f)
-# y = modifiedGaussWithChoiceLU(E, 50000, 4)
-# x = solveWithLUChoice(y[1], y[2],y[3], 50000, 4, f)
-# println(x)
+# # LU = modifiedGaussWithChoiceLU(E, 16, 4)
+# # k = solveWithLUChoice(LU[1], LU[2], LU[3], 16, 4, f)
+# # println(k)
+# # A = modifiedGauss(E, 16, 4, f)
+# # X = modifiedGauss(E,16, 4)
+# x = modifiedGaussLU(E, 16, 4)
+# println(solveWithLU(x[1], x[2], 16, 4, f))
+# # println(solveWithGauss(16, E, f, 4))
+# # Y = solveWithLU(X[1], X[2], 16, 4, f)
+# # IOfunctions.saveVectorToFileDelta(Y, "wektor.txt")
+# # println(Array(X[1])*Array(X[2]))
+# # println(Array(Y))
+# # println(f)
+# # y = modifiedGaussWithChoiceLU(E, 50000, 4)
+# # x = solveWithLUChoice(y[1], y[2],y[3], 50000, 4, f)
+# # println(x)
 
