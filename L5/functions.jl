@@ -46,15 +46,14 @@ Function computing Gauss matrix (upper triangular) from matrix A
 function modifiedGauss(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int64, l::Int64, bv::Vector{Float64})
     B = copy(A)
     b = copy(bv)
-    count = 0
     #loop over columns
     for k in 1:n-1
         #loop over rows 
-        for i in k+1 : min(n, k+l+1)
+        for i in k+1 : min(n, k+l+1) #sure
             multiplier = B[i,k] / B[k,k]
             B[i,k] = Float64(0.0)
             #for each cell change others in the row
-            for j in k+1 : min(n, k+l+1)
+            for j in k+1 : min(n, k+l) #sure auch
                 B[i,j] -=  multiplier * B[k,j]
             end
             #when modifing matrix, right side vector must be modified too
@@ -135,7 +134,7 @@ function solveWithGauss(n::Int64,A::SparseArrays.SparseMatrixCSC{Float64, Int64}
     #iterate over matrix to compute x-vector
     for i in n:-1:1
         sum = 0
-        for j in i+1 : min(n, i+l+2)
+        for j in i+1 : min(n, i+l) #sure
             sum += B[i,j] * x[j]
         end
         x[i] = (b[i] - sum) / B[i,i]
@@ -161,12 +160,12 @@ function solveWithChoiceGauss(n::Int64, A::SparseArrays.SparseMatrixCSC{Float64,
     b = gauss[3]
     x=zeros(Float64,n)
 
-    # solves Lz=Pb
-    for k in 1: n-1
-        for i in k+1 : min(n, k+2*l)
-            b[p[i]] -= B[p[i],k] * b[p[k]]
-        end
-    end
+    # #solves Lz=Pb
+    # for k in 1: n-1
+    #     for i in k+1 : min(n, k+l-4)
+    #         b[p[i]] -= B[p[i],k] * b[p[k]]
+    #     end
+    # end
     #solves Ux=z
     for i in n:-1:1
         sum = 0
@@ -199,7 +198,7 @@ function modifiedGaussLU(A::SparseArrays.SparseMatrixCSC{Float64, Int64}, n::Int
             L[i,k] = multiplier 
             U[i,k] = 0.0
             #for each cell change others in row
-            for j in k+1 : min(n, k+2*l)
+            for j in k+1 : min(n, k+l)
                 U[i,j] -=  multiplier*U[k,j]
             end
         end
@@ -302,7 +301,7 @@ function solveWithLUChoice(L::SparseArrays.SparseMatrixCSC{Float64, Int64}, U::S
     x = zeros(Float64,n)
     # Lz = Pb
     for k in 1: n-1
-        for i in k+1 : min(n, k+2*l+5)
+        for i in k+1 : min(n, k+l+1)
             b[p[i]] -= L[p[i],k] * b[p[k]]
         end
     end

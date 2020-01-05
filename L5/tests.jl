@@ -1,7 +1,6 @@
 include("functions.jl")
 include("IOfunctions.jl")
 include("matrixgen.jl")
-using LinearAlgebra
 using SparseArrays
 # using blockmat
 
@@ -9,9 +8,11 @@ using SparseArrays
 # A16 = IOfunctions.readMatrix("16/A.txt")
 # b16 = IOfunctions.readRightSideVector("16/b.txt")
 
-# matrixgen.blockmat(100, 5, 10.0, "100/A.txt")
+# matrixgen.blockmat(100, 10, 10.0, "100/A.txt")
 # A100 = IOfunctions.readMatrix("100/A.txt")
-# b100 = IOfunctions.rightSideFromMatrix(A100, 100, 5)
+# b100 = IOfunctions.rightSideFromMatrix(A100, 100, 10)
+
+# println(blocksys.LUChoice(100, A100, b100, 10))
 
 # matrixgen.blockmat(1000, 4, 10.0, "1000/A.txt")
 # A1000 = IOfunctions.readMatrix("1000/A.txt")
@@ -20,8 +21,8 @@ using SparseArrays
 # A10000 = IOfunctions.readMatrix("10000/A.txt")
 # b10000 = IOfunctions.readRightSideVector("10000/b.txt")
 
-# A50000 = IOfunctions.readMatrix("50000/A.txt")
-# b50000 = IOfunctions.readRightSideVector("50000/b.txt")
+A50000 = IOfunctions.readMatrix("50000/A.txt")
+b50000 = IOfunctions.readRightSideVector("50000/b.txt")
 
 # b162 = IOfunctions.rightSideFromMatrix(A10000, 10000, 4)
 
@@ -46,7 +47,7 @@ for j in 1:4
     for k in 100:100:1000
         benchmark(k, 4, 5, functions[j])
     end
-    for k in 1000:1000:50000
+    for k in 1000:2000:50000
         benchmark(k, 4, 5, functions[j])
     end
 end
